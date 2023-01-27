@@ -130,16 +130,17 @@ def PlayMusic(update:Update, context:CallbackContext):
         driver.close()
 
 # Iniciar conversacion
-def inicioCallback(update: Update, context:CallbackContext):
-    update.message.reply_text('Hola, ¿Cómo es tu usuario?')
+def startCallback(update: Update, context:CallbackContext):
+    update.message.reply_text(f'¡Bienvenido! Soy un bot de asistencia, ¿Cómo es que quisieras que te llame?')
+    print(update)
     return USER
 
 def userCallback(update: Update, context: CallbackContext):
-    update.message.reply_text(f'Hola, {update.message.text}, ¿cómo es tu correo?')
+    update.message.reply_text(f'Hola, {update.message.text}, ¿cuál es tu correo? Esto me va a servir para poder comunicarme contigo.')
     return CORREO
 
 def correoCallback(update:Update, context: CallbackContext):
-    update.message.reply_text('Email recibido de forma excitante')
+    update.message.reply_text('Email recibido de forma exitosa')
     return ConversationHandler.END
             
 def errorCallback(update:Update, context:CallbackContext):
@@ -355,18 +356,18 @@ def main():
         MessageHandler(filters = Filters.text, callback = errorCallback)
     }
 
-    entry = {
-        CommandHandler('opinion', pregunta4)
-    }
-    states = {
-        OPINION:{
-            CallbackQueryHandler(si, pattern = r"^si$"),
-            CallbackQueryHandler(no, pattern = r"^no$")
-        },
-        NO:{
-            CallbackQueryHandler(motivo)
-        }
-    }
+    # entry = {
+    #     CommandHandler('opinion', pregunta4)
+    # }
+    # states = {
+    #     OPINION:{
+    #         CallbackQueryHandler(si, pattern = r"^si$"),
+    #         CallbackQueryHandler(no, pattern = r"^no$")
+    #     },
+    #     NO:{
+    #         CallbackQueryHandler(motivo)
+    #     }
+    # }
     fallback = []
     # dispatcher.add_handler(ConversationHandler(entry,states,fallback))
     # dispatcher.add_handler(ConversationHandler(entry_point, states,errorUsuario))

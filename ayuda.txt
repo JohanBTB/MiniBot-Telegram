@@ -1,0 +1,16 @@
+{'update_id': 60765613, 
+'message': {'new_chat_members': [], 'group_chat_created': False, 'message_id': 887,
+
+ 'entities': [{'offset': 0, 'length': 8, 'type': 'bot_command'}],
+
+ 'chat': {'username': 'Johantb2001', 'type': 'private', 'id': 1596810917, 'first_name': 'Johan', 'last_name': 'T'}
+
+, 'caption_entities': [], 'photo': [], 'text': '/Iniciar', 'delete_chat_photo': False, 'date': 1674842286, 'new_chat_photo': [], 'supergroup_chat_created': False, 'channel_chat_created': False,
+
+ 'from': {'id': 1596810917, 'username': 'Johantb2001', 'first_name': 'Johan', 'is_bot': False, 'last_name': 'T', 'language_code': 'es'}}}
+
+
+
+
+#--------------------------------------
+/bienvenida
