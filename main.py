@@ -4,24 +4,22 @@ import conversations # Importacion de librerias propias
 
 from telegram.ext import Updater # Importacion del Updater de telegram
 TOKEN = "5798240265:AAGdgZ4EwjoDAZL2JmCkreoBgwtIbLhRO-0"
-ID_CHAT = '1596810917'
-
+CHAT_ID = ""
 
 def main():
     updater = Updater(TOKEN)
     dispatcher = updater.dispatcher
-    updater.bot.send_message(ID_CHAT, 'Bienvenido 🐭.')
-
+    
+    conversations.start(dispatcher)
     #CONNECTION
-    conn = connection.startConnection()
-    connection.testConnection(conn)
-
-    #CONVERSATIONS
-    conversations.welcomeConversation(dispatcher)
-
+    # connection.verify_user(CHAT_ID)
+    # #CONVERSATIONS
+    conversations.welcome_conversation(updater,dispatcher)
+    print(CHAT_ID)
     updater.start_polling()
     updater.idle()
 if __name__ == '__main__':
     main()
+    
 
 

@@ -1,0 +1,17 @@
+CREATE TABLE Chats(
+	id int PRIMARY KEY,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO chats(id) VALUES(1596810917);
+
+CREATE TABLE Users(
+	id INT GENERATED ALWAYS AS IDENTITY,
+	chat_id INT NOT NULL,
+	name CHAR(30) NOT NULL,
+	nickname CHAR(30) NULL,
+	email char(30) NULL,
+	CONSTRAINT fk_chat
+	FOREIGN KEY(chat_id)
+	REFERENCES chats(id)
+);
