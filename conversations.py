@@ -5,9 +5,11 @@ from telegram.ext import Updater, MessageHandler, Filters, CallbackContext, Comm
                         CallbackQueryHandler, InlineQueryHandler
 import connection
 import time
+import asyncio
+import smtplib
 HOME_PATH = r"D:\JOHAN\python\MyBot"
-# NEW_USER, USER, EMAIL, EARLY_END, NICKNAME, UPDATE_EMAIL, KEEP_EMAIL = range(7)
-NEW_USER, KC_USER,KC_EMAIL2, KC_EMAIL, NEW_EMAIL, END, UPDATE_EMAIL, UPDATE_USER = range(8)
+
+NEW_USER, KC_USER,KC_EMAIL2, KC_EMAIL, NEW_EMAIL, UPDATE_EMAIL, UPDATE_USER = range(7)
 CHAT_ID = ""
 start_handler =""
 # Start
@@ -21,6 +23,10 @@ def start(dispatcher):
     global start_handler
     start_handler = MessageHandler(filters = Filters.text & ~Filters.command,callback= verifying)
     dispatcher.add_handler(start_handler)
+
+def sendMessag():
+
+    pass
 
 # StartConversation   
 
@@ -40,7 +46,7 @@ def welcome_conversation(updater,dispatcher):
         context.bot.send_message(chat_id = CHAT_ID, text = 'Eso seria todo amig@.')
 
     # -------------------------------------------------------------------------------------------        
-    #1
+    # Callback that return a keep_or_change question o asks to the new_user for nickname
     def start_callback(update:Update, context:CallbackContext):
         global start_handler
         updater.dispatcher.remove_handler(start_handler) # Remueve el handler de Bienvenida
@@ -48,14 +54,14 @@ def welcome_conversation(updater,dispatcher):
         print('iniciando bienvenida')
         if (exist):
             mensaje, keyboardMarkup = keep_or_change('nickname')
-            #mensaje = f"¿Quieres cambiar tu {column} o quieres seguir utilizando {connection.get_user_info(CHAT_ID,column)}?"
-
+        
             update.message.reply_text(mensaje, reply_markup = keyboardMarkup)
             return KC_USER      
         else:
             update.message.reply_text('Aahh, Parece que eres nuevo. Soy un bot de asistencia, mucho gusto en conocerte.\n¿Como es que quisieras que te llame?')
             return NEW_USER
     
+    # Callback that asks for nickname of the new_user
     def new_user_callback(update:Update,context:CallbackContext):
         message = update.message
         connection.creating_user(CHAT_ID, f"{message.from_user.first_name} {message.from_user.last_name}", message.text) # Creando nuevo usuario
@@ -63,11 +69,13 @@ def welcome_conversation(updater,dispatcher):
    
         return NEW_EMAIL
 
+    # Callback that saves the email and put an end to the conversation
     def new_email_callback(update:Update, context:CallbackContext):
         connection.update_info(CHAT_ID, 'email', update.message.text)
         update.message.reply_text("Tu correo ha sido memorizado con mi mente prodigiosa y guardado en mi corazon.")
         return ConversationHandler.END
         
+    # Callback that receives an QueryCallback and asks you to change or keep your nickname
     def kc_user_callback(update:Update, context:CallbackContext):
         if(update.callback_query.data == 'change_nickname'):
             context.bot.send_message(chat_id = CHAT_ID, text = '¿Cómo te gustaria que te empecemos a llamar?')
@@ -77,6 +85,7 @@ def welcome_conversation(updater,dispatcher):
             context.bot.send_message(chat_id = CHAT_ID, text = mensaje, reply_markup = keyboardMarkup)
             return KC_EMAIL
     
+    # Callback that receives an querycallback and asks your email or puts an end to the conversation
     def kc_email_callback(update:Update, context:CallbackContext):
         if(update.callback_query.data == 'change_email'):
             context.bot.send_message(chat_id = CHAT_ID, text = '¿Qué correo piensas usar?')
@@ -85,22 +94,21 @@ def welcome_conversation(updater,dispatcher):
             end(context)
             return ConversationHandler.END
     
+    # Callback that receives an QueryCallback and asks you to change or keep email
     def update_user_callback(update:Update, contet:CallbackContext):
         connection.update_info(CHAT_ID, 'nickname', update.message.text)
         mensaje, keyboardMarkup = keep_or_change('email')
         update.message.reply_text(mensaje, reply_markup = keyboardMarkup)
         return KC_EMAIL2
 
-    def end_callback(update:Update, context:CallbackContext):
-        print('se usa el end')
-        end(context)
-        return ConversationHandler.END
-    
+    # Callback that updates your email and put an end to the conversation    
     def update_email_callback(update:Update,context:CallbackContext):
         connection.update_info(CHAT_ID, 'email', update.message.text)
         update.message.reply_text("Tu correo ha sido memorizado con mi mente prodigiosa y guardado en mi corazon.")
+        end(context)
         return ConversationHandler.END
 
+    # Callback that receives an QueryCallback and asks your email or just put an end to the conversation
     def kc_email2_callback(update:Update, context:CallbackContext):
         if(update.callback_query.data == 'change_email'):
             context.bot.send_message(chat_id = CHAT_ID, text = '¿Qué correo deseas usar?')
@@ -137,101 +145,10 @@ def welcome_conversation(updater,dispatcher):
             },
             KC_EMAIL2:{
                 CallbackQueryHandler(callback = kc_email2_callback)
-            },
-            END:{
-                CallbackQueryHandler(callback = end_callback)
             }
         }
     errorUser = {
             MessageHandler(filters = Filters.text, callback = error_callback)
         }
     dispatcher.add_handler(ConversationHandler(entry_points = entry_point, states = states, fallbacks = errorUser))
-
-
-    # def new_user_callback(update: Update, context:CallbackContext):
-    #     context.bot.send_message(chat_id = CHAT_ID, text = '¿Cómo te gustaria que te llamemos?')
-    #     message = update.message
-    #     connection.creating_user(CHAT_ID, f"{message.from_user.first_name} {message.from_user.last_name}", message.text) # Creando nuevo usuario
-    #     update.message.reply_text(f"Hola {update.message.text}, espero estes bien. Me podrias dar tu correo para poderme comunicar contigo mejor")
-    #     return EMAIL
-
-
-    # def user_callback(update: Update, context:CallbackContext):
-    #     print("llego aluser")
-    #     buttons = [[
-    #         InlineKeyboardButton('Cambiar correo', callback_data = "change_email"),
-    #         InlineKeyboardButton('Seguir utilizando la misma', callback_data = "keep_email")
-    #     ]]
-    #     keyboardMarkup = InlineKeyboardMarkup(buttons,  one_time_keyboard = True)
-    #     nickname = update.message.text
-    #     if len(nickname)>0:
-    #         connection.update_info(CHAT_ID, 'nickname',nickname)
-        
-    #     mensaje = f"Hola {update.message.text}, ¿quieres cambiar tu correo o seguir utilizando {connection.get_user_info(CHAT_ID, 'email')}?"
-    #     update.message.reply_text(mensaje, reply_markup = keyboardMarkup)
-
-    #     return UPDATE_EMAIL
-
-    # def keep_email_callback(update:Update, context:CallbackContext):
-    #     context.bot.send_message(chat_id = CHAT_ID, text = 'Mantendremos su nickname tal como está')
-    #     return USER
-    
-    # def update_email_callback(update:Update, context:CallbackContext):
-    #     print('Se llego al update_eail')
-    #     if(update.callback_query.data == 'change_email'):
-    #         context.bot.send_message(chat_id = CHAT_ID, text = 'Dime tu nuevo email')
-    #         return EMAIL
-    #     else:
-    #         return EARLY_END
-    #     pass
-
-
-
-    # def email_callback(update: Update, context:CallbackContext):
-    #     print("Se llego al email")
-    #     connection.update_info(CHAT_ID, 'email',update.message.text)
-    #     update.message.reply_text("Tu correo ha sido memorizado con mi mente prodigiosa y guardado en mi corazon.")
-    #     return ConversationHandler.END
-    
-    # def early_end_callback(update: Update, context:CallbackContext):
-    #     print("SE LLEGO AL EARLY END")
-    #     context.bot.send_message(chat_id = CHAT_ID, text = 'Eso seria todo amig@.')
-    #     return ConversationHandler.END
-
-    # def error_callback(update: Update, context:CallbackContext):
-    #     time.sleep(2)
-    #     update.message.reply_text("Algo salio mal pipipi\nEscribemelo nuevamente")
-    #     update.message.reply_animation(open(HOME_PATH + r"\recursos\bug_bocchi.gif", "rb"))
-
-    # entry_point = {
-    #         CommandHandler(command = ["bienvenido","bienvenida", "bienvenid"], callback = start_callback)
-    #     }
-    # states = {
-    #         NEW_USER:{
-    #             MessageHandler(filters = Filters.regex("[a-zA-Z]{4,30}"), callback = new_user_callback)
-    #         },
-    #         USER:{
-    #             MessageHandler(filters = Filters.regex("[a-zA-Z]{0,30}"), callback = user_callback)
-    #         },
-    #         EMAIL:{
-    #             MessageHandler(filters = Filters.regex("^[a-z0-9]+[\._]?[ a-z0-9]+[@]\w+[. ]\w{2,3}$"), callback = email_callback)
-    #         },
-    #         EARLY_END:{
-    #             CallbackQueryHandler(callback = early_end_callback)
-    #         },
-    #         NICKNAME:{
-    #             #MessageHandler(filters = Filters.regex(r'^(change_nickname|keep_nickname)$') & ~Filters.command, callback = nickname_callback)
-    #             CallbackQueryHandler(callback = nickname_callback)
-    #         },
-    #         KEEP_EMAIL:{
-    #             CallbackQueryHandler(callback = keep_email_callback)
-    #         },
-    #         UPDATE_EMAIL:{
-    #             CallbackQueryHandler(callback = update_email_callback)
-    #         }
-    #     }
-    # errorUser = {
-    #         MessageHandler(filters = Filters.text, callback = error_callback)
-    #     }
-    # dispatcher.add_handler(ConversationHandler(entry_points = entry_point, states = states, fallbacks = errorUser))
 
