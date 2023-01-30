@@ -1,5 +1,20 @@
 import psycopg2
-conn = None 
+
+def connection():
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            database="MyBot",
+            user="postgres",
+            password="johan12.com"
+        )
+        return conn
+
+    except psycopg2.Error as e:
+        print(f"C.0 Sucedio un error al tratar de conectarse a la base de datos.\n{e}")
+
+conn = connection()
+
 # DECORATOR1 - Para el try y los mensajes de error
 def error1(errorMessage):
     def decorator(func):
@@ -32,19 +47,6 @@ def error2(errorMessage):
         return wrapper
     return decorator
 
-            
-def connection():
-    try:
-        conn = psycopg2.connect(
-            host="localhost",
-            database="MyBot",
-            user="postgres",
-            password="johan12.com"
-        )
-        return conn
-
-    except psycopg2.Error as e:
-        print(f"C.0 Sucedio un error al tratar de conectarse a la base de datos.\n{e}")
 
 def close_connection(conn):
     try:
@@ -91,6 +93,7 @@ def verify_user(CHAT_ID, conn = None):
 def creating_user(CHAT_ID, userName, userNickname):
     global conn
     conn = connection()
+
     cursor = conn.cursor()
     cursor.execute("INSERT INTO users(chat_id,name,nickname) VALUES(%s,%s,%s)",(CHAT_ID,userName,userNickname))
     # conn.commit()
@@ -101,15 +104,18 @@ def get_user_info(CHAT_ID, column, conn = None):
     cursor = conn.cursor()
     cursor.execute("SELECT {} FROM users where chat_id = %s".format(column), (CHAT_ID,))
     usuario = cursor.fetchone()
+    
     return usuario[0]
 
-@error2 (errorMessage="C.5 Fallo al actualizar o guardar el email.")
-def update_info(CHAT_ID, column,value):
+@error2 (errorMessage="C.5 Fallo al actualizar o guardar informacion.")
+def update_info(CHAT_ID, column,value, cerrar=True):
     global conn
+    if conn.closed != 0:
+        conn = connection()
     cursor = conn.cursor()
     
-    value = cursor.execute("UPDATE users SET {} = %s WHERE chat_id = %s".format(column), (value,CHAT_ID))
+    cursor.execute("UPDATE users SET {} = %s WHERE chat_id = %s".format(column), (value,CHAT_ID))
     conn.commit()
-    
-    close_connection(conn)
+    if cerrar:
+        close_connection(conn)
     

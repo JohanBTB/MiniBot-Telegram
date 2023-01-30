@@ -1,6 +1,9 @@
 
 import connection # Conexion a base de datos PostgreSQL
 import conversations # Importacion de librerias propias
+import warnings
+#WARNINGS
+warnings.filterwarnings("ignore", category=UserWarning, module="telegram.ext.conversationhandler")
 
 from telegram.ext import Updater # Importacion del Updater de telegram
 TOKEN = "5798240265:AAGdgZ4EwjoDAZL2JmCkreoBgwtIbLhRO-0"
