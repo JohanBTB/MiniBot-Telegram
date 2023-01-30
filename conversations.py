@@ -116,6 +116,8 @@ def welcome_conversation(updater,dispatcher):
         else:
             end(context)
             return ConversationHandler.END
+
+    # Callback de error
     def error_callback(update: Update, context:CallbackContext):
         time.sleep(2)
         update.message.reply_text("Algo salio mal pipipi\nEscribemelo nuevamente")
