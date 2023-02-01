@@ -76,6 +76,7 @@ def test_connection():
         if(conn):
             close_connection(conn)
 
+# VERIFYING
 @error1 (errorMessage = "C.2 Fallo la coneccion al verificar usuario.")
 def verify_user(CHAT_ID, conn = None):
         cursor = conn.cursor()
@@ -101,10 +102,10 @@ def verify_product(nombre, conn = None):
         print("Es nuevo producto")
         exist = False
         return exist, product
-    print(product)
     product = {'id':product[0],'name':product[1],'unit':product[2],'dued_at':product[3]}
     return exist, product
-
+# ---------------------------------------------------------------------------------------------------
+# CREATING
 @error2 (errorMessage="C.3 Fallo algo al crear el usuario.")
 def creating_user(CHAT_ID, userName, userNickname):
     global conn
@@ -125,7 +126,8 @@ def creating_product(CHAT_ID, product):
     conn.commit()
     close_connection(conn)
     return True
-
+# ---------------------------------------------------------------------------------------------------
+# GETTING DATA
 @error1 (errorMessage="C.4 Fallo al conseguir el informacion del usuario.")
 def get_user_info(CHAT_ID, column, conn = None):
     cursor = conn.cursor()
@@ -133,7 +135,18 @@ def get_user_info(CHAT_ID, column, conn = None):
     usuario = cursor.fetchone()
     
     return usuario[0]
-
+@error1 (errorMessage="C.4.1 Fallo al conseguir informacion de la tabla productos")
+def get_products(CHAT_ID, value, conn = None):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id,name FROM products where name like '%{}%'".format(value))
+    rows = cursor.fetchmany()
+    result = []
+    while rows:
+        result.extend(rows)
+        rows = cursor.fetchmany()
+    return result
+# ---------------------------------------------------------------------------------------------------
+# UPDATING
 @error2 (errorMessage="C.5 Fallo al actualizar o guardar informacion.")
 def update_info(CHAT_ID, column,value, cerrar=True):
     global conn
@@ -162,3 +175,12 @@ def update_product(CHAT_ID,product, cerrar=True ):
     conn.commit()
     if cerrar:
         close_connection(conn)
+# ---------------------------------------------------------------------------------------------------
+# DELETING
+@error1 (errorMessage = "C.2.1 Fallo la la eliminacion de un producto.")
+def delete_product(CHAT_ID,id_product, conn = None):
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM products where chat_id = %s and id = %s", (CHAT_ID, int(id_product)))
+    conn.commit()
+    return True
+    
