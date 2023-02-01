@@ -9,9 +9,9 @@ def connection():
             password="johan12.com"
         )
         return conn
-
+        print("Se inicio la coneccion PostgreSQL")
     except psycopg2.Error as e:
-        print(f"C.0 Sucedio un error al tratar de conectarse a la base de datos.\n{e}")
+        print(f"C.0 Sucedio un error al trat|ar de conectarse a la base de datos.\n{e}")
 
 conn = connection()
 
@@ -89,6 +89,22 @@ def verify_user(CHAT_ID, conn = None):
             exist = False
         return exist, chat
 
+@error1 (errorMessage = "C.2.1 Fallo la coneccion al verificar el producto.")
+def verify_product(nombre, conn = None):
+    cursor = conn.cursor()
+    exist = True
+    cursor.execute("Select id, name, unit, dued_at from products where name = LOWER(%s)",(nombre,) )
+    product = cursor.fetchone()
+    
+    if product is None:
+        product = {'name':nombre,'unit':0,'dued_at':''}
+        print("Es nuevo producto")
+        exist = False
+        return exist, product
+    print(product)
+    product = {'id':product[0],'name':product[1],'unit':product[2],'dued_at':product[3]}
+    return exist, product
+
 @error2 (errorMessage="C.3 Fallo algo al crear el usuario.")
 def creating_user(CHAT_ID, userName, userNickname):
     global conn
@@ -96,9 +112,20 @@ def creating_user(CHAT_ID, userName, userNickname):
 
     cursor = conn.cursor()
     cursor.execute("INSERT INTO users(chat_id,name,nickname) VALUES(%s,%s,%s)",(CHAT_ID,userName,userNickname))
-    # conn.commit()
+    conn.commit()
     return True
-    
+
+@error2 (errorMessage = "C.3.1 Fallo algo al crear el producto.")
+def creating_product(CHAT_ID, product):
+    global conn
+    conn = connection()
+
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO products(chat_id,name,unit,dued_at) VALUES(%s,%s,%s,%s)",(CHAT_ID,product['name'], product['unit'],product['dued_at']))
+    conn.commit()
+    close_connection(conn)
+    return True
+
 @error1 (errorMessage="C.4 Fallo al conseguir el informacion del usuario.")
 def get_user_info(CHAT_ID, column, conn = None):
     cursor = conn.cursor()
@@ -118,4 +145,20 @@ def update_info(CHAT_ID, column,value, cerrar=True):
     conn.commit()
     if cerrar:
         close_connection(conn)
-    
+
+@error2 (errorMessage="C.5.1 Fallo al actualizar o guardar el producto.")
+def update_product(CHAT_ID,product, cerrar=True ):
+    global conn
+    if conn.closed != 0:
+        conn = connection()
+    cursor = conn.cursor()
+    keys = list(product.keys())
+    id_product = product['id']
+    for i in range (2,4):
+        key = keys[i]
+
+        cursor.execute("UPDATE products SET {} = %s WHERE chat_id = %s AND id = %s".format(key), (product[key],CHAT_ID, id_product))
+    cursor.execute("UPDATE products SET updated_at = CURRENT_TIMESTAMP WHERE chat_id = %s AND id = %s", (CHAT_ID, id_product))
+    conn.commit()
+    if cerrar:
+        close_connection(conn)

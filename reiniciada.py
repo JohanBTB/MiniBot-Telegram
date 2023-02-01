@@ -31,6 +31,21 @@ try:
 	ON DELETE CASCADE
     );""")
 
+    cursor.execute("""CREATE TABLE Products(
+	id INT GENERATED ALWAYS AS IDENTITY,
+	chat_id INT NOT NULL,
+	name VARCHAR(30),
+	unit INT, 
+	dued_at TIMESTAMP, 
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, 
+	CONSTRAINT fk_chat
+	FOREIGN KEY(chat_id)
+	REFERENCES chats(id)
+	ON DELETE CASCADE
+    );
+    """)
+
     conn.commit()
     cursor.close()
     conn.close()

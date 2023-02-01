@@ -3,13 +3,16 @@ from telegram import Update, ParseMode, Poll, InputMediaPhoto, InputMediaVideo, 
                     InlineQueryResultGame
 from telegram.ext import Updater, MessageHandler, Filters, CallbackContext, CommandHandler, ConversationHandler, \
                         CallbackQueryHandler, InlineQueryHandler
+from telegram.ext.dispatcher import run_async
+
 import connection
-import time
+import time, datetime
 import asyncio
 import smtplib
 HOME_PATH = r"D:\JOHAN\python\MyBot"
 
 NEW_USER, KC_USER,KC_EMAIL2, KC_EMAIL, NEW_EMAIL, UPDATE_EMAIL, UPDATE_USER = range(7)
+
 CHAT_ID = ""
 start_handler =""
 # Start
@@ -24,9 +27,15 @@ def start(dispatcher):
     start_handler = MessageHandler(filters = Filters.text & ~Filters.command,callback= verifying)
     dispatcher.add_handler(start_handler)
 
-def sendMessag():
+def sendMessage():
+    sender_email = connection.get_user_info(CHAT_ID, 'email')
+    receiver = "jonny.tu.pai.69@gmail.com"
 
-    pass
+def cancel_callback(update:Update, context:CallbackContext):
+    global start_handler
+    mensaje = "Nom puedem serm 😞."
+    update.message.reply_text(mensaje)
+    return ConversationHandler.END
 
 # StartConversation   
 
@@ -42,6 +51,7 @@ def welcome_conversation(updater,dispatcher):
         keyboardMarkup = InlineKeyboardMarkup(buttons)
         mensaje = f"¿Quieres cambiar tu {column} o quieres seguir utilizando {connection.get_user_info(CHAT_ID,column)}?"
         return mensaje, keyboardMarkup
+
     def end(context):
         context.bot.send_message(chat_id = CHAT_ID, text = 'Eso seria todo amig@.')
 
@@ -49,7 +59,8 @@ def welcome_conversation(updater,dispatcher):
     # Callback that return a keep_or_change question o asks to the new_user for nickname
     def start_callback(update:Update, context:CallbackContext):
         global start_handler
-        updater.dispatcher.remove_handler(start_handler) # Remueve el handler de Bienvenida
+        if (start_handler!=''):
+            updater.dispatcher.remove_handler(start_handler) # Remueve el handler de Bienvenida
         exist, chat = connection.verify_user(CHAT_ID) # Verificando si existe el usuario
         print('iniciando bienvenida')
         if (exist):
@@ -117,10 +128,10 @@ def welcome_conversation(updater,dispatcher):
             end(context)
             return ConversationHandler.END
 
-    # Callback de error
+    # Callback of error
     def error_callback(update: Update, context:CallbackContext):
-        time.sleep(2)
-        update.message.reply_text("Algo salio mal pipipi\nEscribemelo nuevamente")
+        print("Salio error")
+        update.message.reply_text("Algo salió mal pipipi\n Eescribemelo nuevamente.")
         update.message.reply_animation(open(HOME_PATH + r"\recursos\bug_bocchi.gif", "rb"))
 
     entry_point = {
@@ -150,7 +161,147 @@ def welcome_conversation(updater,dispatcher):
             }
         }
     errorUser = {
-            MessageHandler(filters = Filters.text, callback = error_callback)
+            CommandHandler(command = ['cancelar', 'cancel', 'cancela'], callback = cancel_callback),
+            MessageHandler(filters = Filters.text & ~Filters.command, callback = error_callback),
         }
     dispatcher.add_handler(ConversationHandler(entry_points = entry_point, states = states, fallbacks = errorUser))
+
+# FIN Start Conversation --------------------------------------------------------------------------------------------------------------------------------------
+
+UPDATE_UNIT, NEW_PRODUCT, DATE,KC_DATE, UPDATE_DATE, VERIFY_PRODUCT= range(6)
+
+def productos(updater,dispatcher):
+
+    global product
+    # USEFUL FUNCTIONS
+    def keep_or_change(column):
+
+        print(f"Iniciando keep_or_chamge de {column}")
+        buttons = [[
+                InlineKeyboardButton(f'Mantener {column}', callback_data = f'keep_{column}'),
+                InlineKeyboardButton(f'Cambiar {column}', callback_data = f'change_{column}')
+            ]]
+        keyboardMarkup = InlineKeyboardMarkup(buttons)
+        return keyboardMarkup
+
+    def end(context):
+        global product
+        product = ""
+        context.bot.send_message(chat_id = CHAT_ID, text = 'Eso seria todo amig@.')
+
+    # Callback that starts the conversation of the command "guardar"
+    def start_product_callback(update:Update, context:CallbackContext):
+        global start_handler
+        if(start_handler != ''):
+            updater.dispatcher.remove_handler(start_handler) 
+        update.message.reply_text(f"Hola { connection.get_user_info(CHAT_ID, 'nickname') }, ¿cómo se va a llamar lo que va a guardar? ")
+        return VERIFY_PRODUCT
+    
+    # Callback that verifies the existance of the product 
+    def verify_product_callback(update:Update, context:CallbackContext):
+        print("Se esta verificando")
+        global product
+        product = {}
+        exist, product = connection.verify_product(update.message.text)
+        if (exist):
+            mensaje = f"Tal parece que ya existe y tiene {product['unit']} unidad(es), ¿A cuantas unidades quiere cambiarlo?"
+            update.message.reply_text(mensaje)
+            return UPDATE_UNIT     
+        else:
+            update.message.reply_text('Aahh, Parece que es un nuevo producto ¿Cuantas unidades desea colocar?')
+            return NEW_PRODUCT
+    
+    # Callback the receives the units of the product and asks for the due date
+    def new_product_callback(update:Update, context:CallbackContext):
+        global product
+        print("Esta en new_product")
+        product['unit'] = int(update.message.text)
+        update.message.reply_text('¿Cuál es la fecha de vencimiento?\n Un ejemplo de fecha que debe ingresar es: 12-10-2021')
+        return DATE
+
+    # It updates the units and asks if you wanna change the due date
+    def update_unit_callback(update:Update, context:CallbackContext):
+        global product
+        print("Esta en update_unit")
+        product['unit'] = int(update.message.text)
+        mensaje = f"Las unidades han sido cambiadas.\nLa fecha está en {product['dued_at']} ¿desea cambiarla?" 
+        keyboardMarkup = keep_or_change('dued_at')
+        update.message.reply_text(mensaje, reply_markup = keyboardMarkup)
+        return KC_DATE
+    
+    # It saves the date and finish the conversation
+    def date_callback(update:Update, context:CallbackContext):
+        print("Esta en date")
+        try:
+            product['dued_at'] = datetime.datetime.strptime(update.message.text, '%d-%m-%Y').date()
+            update.message.reply_text("Su fecha a sido guardada.")
+            connection.creating_product(CHAT_ID, product)
+            end(context)
+            context.bot.handle_fallback(update, context)
+            return ConversationHandler.END
+        except Exception as e:
+            print(e)
+            return context.bot.handle_fallback(update, context)
+
+        
+        
+    # Callback that could receive a change for the date or just finish the conversation
+    def kc_date_callback(update:Update, context:CallbackContext):
+        global product
+        print("Esta en kc_date")
+        if(update.callback_query.data == 'change_dued_at'):
+            context.bot.send_message(chat_id = CHAT_ID, text = 'Ingrese la fecha de vencimiento de producto.\nUn ejemplo de fecha que debe ingresar es: 12-10-2021')
+            return UPDATE_DATE
+        else:
+            connection.update_product(CHAT_ID,product)
+            end(context)
+            return ConversationHandler.END
+    
+    # Callback that updates the date and ends the conversation
+    def update_date_callback(update:Update, context:CallbackContext):
+        print("Esta en update_date")
+        global product
+        keys = list(product.keys())
+        connection.update_product(CHAT_ID,product)
+        update.message.reply_text("Su fecha a sido guardada.")
+        end(context)
+        return ConversationHandler.END
+
+    # Callback of error
+    def error_product_callback(update: Update, context:CallbackContext):
+        print("Salio error")
+        update.message.reply_text("Todo salio mal.")
+        update.message.reply_animation(open(HOME_PATH + r"\recursos\dangan.gif", "rb"))
+
+
+    UPDATE_UNIT, NEW_PRODUCT, DATE,KC_DATE, UPDATE_DATE= range(5)
+    entry_points = {
+        CommandHandler(command = ['guardar','guarda','guardo'], callback = start_product_callback)
+    }
+    states = {
+        UPDATE_UNIT:{
+            MessageHandler(filters = Filters.regex('^[0-9]{1,3}$'), callback = update_unit_callback)
+        },
+        NEW_PRODUCT:{
+            MessageHandler(filters = Filters.regex('^[0-9]{1,3}$'), callback = new_product_callback)
+        },
+        DATE:{
+            MessageHandler(filters = Filters.regex('^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[012])-(19|20)\d\d$'), callback = date_callback)
+        },
+        KC_DATE:{
+            CallbackQueryHandler(callback = kc_date_callback)
+        },
+        UPDATE_DATE:{
+            MessageHandler(filters = Filters.regex('^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[012])-(19|20)\d\d$'), callback = update_date_callback)
+        },
+        VERIFY_PRODUCT:{
+            MessageHandler(filters = Filters.regex("[a-zA-Z]{4,30}"), callback = verify_product_callback)
+        }
+    }
+    errorUser = {
+            CommandHandler(command = ['cancelar', 'cancel', 'cancela'], callback = cancel_callback),
+            MessageHandler(filters = Filters.text & ~Filters.command, callback = error_product_callback),
+    }
+    dispatcher.add_handler(ConversationHandler(entry_points = entry_points, states = states,  fallbacks = errorUser))
+
 
