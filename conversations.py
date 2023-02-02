@@ -168,8 +168,8 @@ def welcome_conversation(updater,dispatcher):
 
 # FIN Start Conversation --------------------------------------------------------------------------------------------------------------------------------------
 
-GETTING_PRODUCT, UPDATE_CHOOSE, UPDATE_SELECTION, UNITS_UPDATED, DATE_UPDATED = range(5)
-UPDATE_UNIT, NEW_PRODUCT, DATE,KC_DATE, UPDATE_DATE, VERIFY_PRODUCT= range(6)
+UPDATE_GETTING_PRODUCT, UPDATE_CHOOSE, UPDATE_SELECTION, UNIT_UPDATED, DATE_UPDATED = range(5)
+UPDATE_UNIT, NEW_PRODUCT, DATE,KC_DATE, UPDATE_DATE, VERIFY_PRODUCT, UPDATE_CONTINUE= range(7)
 GUESSING, NO_PRODUCT, NO_PRODUCT2, DELETE_PRODUCT= range(4)
 def productos(updater,dispatcher):
 
@@ -205,13 +205,29 @@ def productos(updater,dispatcher):
         product = {}
         exist, product = connection.verify_product(update.message.text)
         if (exist):
-            mensaje = f"Tal parece que ya existe y tiene {product['unit']} unidad(es), ¿A cuantas unidades quiere cambiarlo?"
-            update.message.reply_text(mensaje)
-            return UPDATE_UNIT     
+            mensaje = f"Tal parece que ya existe el producto {product['name']} ¿Quiere actualizarlo o dejarlo asi?"
+            buttons = [[
+                InlineKeyboardButton(f'Ir a actualizar', callback_data = 1),
+                InlineKeyboardButton(f'Dejarlo como está', callback_data = 0)
+            ]]
+            keyboardMarkup = InlineKeyboardMarkup(buttons)
+            update.message.reply_text(mensaje, reply_markup = keyboardMarkup )
+            return UPDATE_CONTINUE   
         else:
             update.message.reply_text('Aahh, Parece que es un nuevo producto ¿Cuantas unidades desea colocar?')
             return NEW_PRODUCT
     
+    def update_continue_callback(update:Update, context:CallbackContext):
+        if(update.callback_query.data == '1'):
+            mensaje = f"Vamos a actualizar entonces.\nTal parece que ya existe y tiene {product['unit']} unidad(es), ¿A cuantas unidades quiere cambiarlo?"
+            context.bot.send_message(chat_id  = CHAT_ID, text = mensaje)
+            return UPDATE_UNIT
+        else:
+            context.bot.send_message(chat_id  = CHAT_ID, text = "Está bien.")
+            end(context)
+            return ConversationHandler.END
+
+
     # Callback the receives the units of the product and asks for the due date
     def new_product_callback(update:Update, context:CallbackContext):
         global product
@@ -295,6 +311,9 @@ def productos(updater,dispatcher):
         },
         VERIFY_PRODUCT:{
             MessageHandler(filters = Filters.regex("[a-zA-Z]{4,30}"), callback = verify_product_callback)
+        },
+        UPDATE_CONTINUE:{
+            CallbackQueryHandler(callback =  update_continue_callback)
         }
     }
     update_fallbacks = {
@@ -406,17 +425,18 @@ def productos(updater,dispatcher):
     dispatcher.add_handler(ConversationHandler(entry_points = delete_entry_points, states = delete_states,  fallbacks = delete_fallbacks))
 
 
-    GETTING_PRODUCT, UPDATE_CHOOSE, UPDATE_SELECTION, UNIT_UPDATED, DATE_UPDATED = range(5)
+    # END PRODUCT DELETE--------------------------------------------------------------------------------------------------------------------------
+    # START PRODUCT UPDATE -----------------------------------------------------------------------------------------------------------------------
 
     def start_update_callback(update:Update, context:CallbackContext):
         global start_handler
         if(start_handler != ''):
             updater.dispatcher.remove_handler(start_handler) 
         update.message.reply_text(f"Hola { connection.get_user_info(CHAT_ID, 'nickname') }, ¿que producto quiere actualizar?")
-        return GETTING_PRODUCT
+        return UPDATE_GETTING_PRODUCT
 
     # Callback that check if the product exist and how many alike do
-    def getting_product_callback(update:Update, context:CallbackContext):
+    def update_getting_product_callback(update:Update, context:CallbackContext):
         rows = connection.get_products(CHAT_ID ,update.message.text)
         if len(rows) == 1:
             row = rows[0]
@@ -499,8 +519,8 @@ def productos(updater,dispatcher):
         CommandHandler(command = ['actualizar','actualiza','actualizo'], callback = start_update_callback)
     }
     update_states = {
-        GETTING_PRODUCT:{
-            MessageHandler(filters = Filters.regex('[a-zA-Z0-9]{2,30}'), callback = getting_product_callback)
+        UPDATE_GETTING_PRODUCT:{
+            MessageHandler(filters = Filters.regex('[a-zA-Z0-9]{2,30}'), callback = update_getting_product_callback)
         },
         UPDATE_CHOOSE:{
            CallbackQueryHandler(callback = update_choose_callback)
