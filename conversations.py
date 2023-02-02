@@ -168,6 +168,7 @@ def welcome_conversation(updater,dispatcher):
 
 # FIN Start Conversation --------------------------------------------------------------------------------------------------------------------------------------
 
+GETTING_PRODUCT, UPDATE_CHOOSE, UPDATE_SELECTION, UNITS_UPDATED, DATE_UPDATED = range(5)
 UPDATE_UNIT, NEW_PRODUCT, DATE,KC_DATE, UPDATE_DATE, VERIFY_PRODUCT= range(6)
 GUESSING, NO_PRODUCT, NO_PRODUCT2, DELETE_PRODUCT= range(4)
 def productos(updater,dispatcher):
@@ -261,7 +262,6 @@ def productos(updater,dispatcher):
     def update_date_callback(update:Update, context:CallbackContext):
         print("Esta en update_date")
         global product
-        keys = list(product.keys())
         connection.update_product(CHAT_ID,product)
         update.message.reply_text("Su fecha a sido guardada.")
         end(context)
@@ -274,10 +274,10 @@ def productos(updater,dispatcher):
         update.message.reply_animation(open(HOME_PATH + r"\recursos\dangan.gif", "rb"))
 
 
-    entry_points = {
+    update_entry_points = {
         CommandHandler(command = ['guardar','guarda','guardo'], callback = start_product_callback)
     }
-    states = {
+    update_states = {
         UPDATE_UNIT:{
             MessageHandler(filters = Filters.regex('^[0-9]{1,3}$'), callback = update_unit_callback)
         },
@@ -297,21 +297,23 @@ def productos(updater,dispatcher):
             MessageHandler(filters = Filters.regex("[a-zA-Z]{4,30}"), callback = verify_product_callback)
         }
     }
-    errorUser = {
+    update_fallbacks = {
             CommandHandler(command = ['cancelar', 'cancel', 'cancela'], callback = cancel_callback),
             MessageHandler(filters = Filters.text & ~Filters.command, callback = error_product_callback),
     }
-    dispatcher.add_handler(ConversationHandler(entry_points = entry_points, states = states,  fallbacks = errorUser))
+    dispatcher.add_handler(ConversationHandler(entry_points = update_entry_points, states = update_states,  fallbacks = update_fallbacks))
 
 
     # END PRODUCT SAVE --------------------------------------------------------------------------------------------------------------------
 
     # START PRODUCT DELETE ----------------------------------------------------------------------------------------------------------------
     
-    def end(context:CallbackContext):
+    # Function that returns a message for the end of the conoversation
+    def end2(context:CallbackContext):
         context.bot.send_message(chat_id = CHAT_ID, text = 'Hasta la proxima.')
         context.bot.send_animation(chat_id = CHAT_ID, animation = open(HOME_PATH + r"\recursos\hasta_la_proxima.gif", "rb"))
 
+    # Callback that manage the start of the command delete
     def start_delete_product_callback(update:Update, context:CallbackContext):
         global start_handler
         if(start_handler != ''):
@@ -319,6 +321,7 @@ def productos(updater,dispatcher):
         update.message.reply_text(f"Hola { connection.get_user_info(CHAT_ID, 'nickname') }, ¿qué es lo que deseas borrar?")
         return GUESSING_PRODUCT
 
+    # Callback that checks if the product exist and how many alike exist
     def guessing_product_callback(update:Update, context:CallbackContext):
         rows = connection.get_products(CHAT_ID ,update.message.text)
         if len(rows) == 1:
@@ -346,44 +349,46 @@ def productos(updater,dispatcher):
             return DELETE_PRODUCT
         else:
             update.message.reply_text("El nombre que me indicas no lo encuentro en mi base de datos. Ya debió haber sido eliminado antes.🙁")
-            end(context)
+            end2(context)
             return ConversationHandler.END
 
+    # Callbacks that checks if the selection is correct
     def yn_delete_product_callback(update:Update, context:CallbackContext):
         if(update.callback_query.data == 'yes'):
             connection.delete_product(CHAT_ID,product[0])
             context.bot.send_message(chat_id = CHAT_ID, text = 'Su producto ha sido eliminado con un 99.9%/ de exito.')
-            end(context)
+            end2(context)
             return ConversationHandler.END
         else:
             context.bot.send_message(chat_id = CHAT_ID, text = "Entonces el producto que busca ya habrá sido eliminado antes.")
-            end(context)
+            end2(context)
             return ConversationHandler.END
            
-
+    # Callback that receives the product that deserves a deleting. 0 if none of them deserve that
     def delete_product_callback(update:Update, context:CallbackContext):
         print(update.callback_query.data)
         print(type(update.callback_query.data))
         if(update.callback_query.data == '0'):
             context.bot.send_message(chat_id = CHAT_ID, text = 'Mmm, entonces su producto ya debió haber sido eliminado antes.🙁')
-            end(context)
+            end2(context)
             return ConversationHandler.END
         else:
             connection.delete_product(CHAT_ID, update.callback_query.data)
             context.bot.send_message(chat_id = CHAT_ID, text = "Su producto ha sido eliminado con un 99.9%/ de exito.")
-            end(context)
+            end2(context)
             return ConversationHandler.END
-
+    
+    # Callback that manage the error fallback
     def error_delete_product_callback(update: Update, context:CallbackContext):
         print("Salio error")
         update.message.reply_text("Todo salio mal.")
         update.message.reply_animation(open(HOME_PATH + r"\recursos\anya.gif", "rb"))
 
     GUESSING_PRODUCT, YN_DELETE_PRODUCT, DELETE_PRODUCT= range(3)
-    entry_points = {
+    delete_entry_points = {
         CommandHandler(command = ['borrar','borra','eliminar','elimino'], callback = start_delete_product_callback)
     }
-    states = {
+    delete_states = {
         GUESSING_PRODUCT:{
             MessageHandler(filters = Filters.regex('[a-zA-Z0-9]{2,30}'), callback = guessing_product_callback)
         },
@@ -394,8 +399,128 @@ def productos(updater,dispatcher):
             CallbackQueryHandler(callback = delete_product_callback)
         },
     }
-    errorUser = {
+    delete_fallbacks = {
             CommandHandler(command = ['cancelar', 'cancel', 'cancela'], callback = cancel_callback),
             MessageHandler(filters = Filters.text & ~Filters.command, callback = error_delete_product_callback),
     }
-    dispatcher.add_handler(ConversationHandler(entry_points = entry_points, states = states,  fallbacks = errorUser))
+    dispatcher.add_handler(ConversationHandler(entry_points = delete_entry_points, states = delete_states,  fallbacks = delete_fallbacks))
+
+
+    GETTING_PRODUCT, UPDATE_CHOOSE, UPDATE_SELECTION, UNIT_UPDATED, DATE_UPDATED = range(5)
+
+    def start_update_callback(update:Update, context:CallbackContext):
+        global start_handler
+        if(start_handler != ''):
+            updater.dispatcher.remove_handler(start_handler) 
+        update.message.reply_text(f"Hola { connection.get_user_info(CHAT_ID, 'nickname') }, ¿que producto quiere actualizar?")
+        return GETTING_PRODUCT
+
+    # Callback that check if the product exist and how many alike do
+    def getting_product_callback(update:Update, context:CallbackContext):
+        rows = connection.get_products(CHAT_ID ,update.message.text)
+        if len(rows) == 1:
+            row = rows[0]
+            buttons = [[
+                    InlineKeyboardButton(f'Si lo es', callback_data = row[0]),
+                    InlineKeyboardButton(f'No, imposible', callback_data = 0)
+                ]]
+            keyboardMarkup = InlineKeyboardMarkup(buttons)
+            
+            update.message.reply_text(f"¿Es {row[1]} lo que desea actualizar, verdad?", reply_markup = keyboardMarkup)
+        elif len(rows) > 1:
+            buttons = []
+            for row in rows:
+                button = []
+                button.append(InlineKeyboardButton(f'{row[1]}', callback_data = row[0]))
+                buttons.append(button)
+            button = []
+            button.append(InlineKeyboardButton("No es ninguno", callback_data = 0))
+            buttons.append(button)
+            print(buttons)
+            keyboardMarkup = InlineKeyboardMarkup(buttons)
+            update.message.reply_text('¿Es alguno de estos?', reply_markup = keyboardMarkup)
+        else:
+            update.message.reply_text("El nombre que me indicas no lo encuentro en mi base de datos. Ya debió haber sido eliminado antes.🙁")
+            end2(context)
+            return ConversationHandler.END
+        return UPDATE_CHOOSE
+
+    # Callback that ask you for which data update
+    def update_choose_callback(update:Update, context:CallbackContext):
+        if (update.callback_query.data == '0'):
+            context.bot.send_message(chat_id = CHAT_ID, text ="Parece que no existe lo que buscas")
+            end2(context)
+            return ConversationHandler.END
+        global product
+        product = connection.get_product(CHAT_ID, int(update.callback_query.data))
+        buttons = [[
+                    InlineKeyboardButton(f"Fecha de Vencimiento\n{product['dued_at']}", callback_data = 'date'),
+                    InlineKeyboardButton(f"Unidades\n{product['unit']}", callback_data = 'unit')
+                ]]
+        keyboardMarkup = InlineKeyboardMarkup(buttons)
+        context.bot.send_message(chat_id = CHAT_ID, text = "¿Qué quiere actualizar?", reply_markup = keyboardMarkup)        
+        return UPDATE_SELECTION
+
+    # Callback that update the selection
+    def update_selection_callback(update:Update, context:CallbackContext):
+        # Choose inline buttons date or unit
+        if(update.callback_query.data == 'date'):
+            context.bot.send_message(chat_id = CHAT_ID, text = "Indique la fecha por la que quiere cambiarla.")
+            return DATE_UPDATED
+        else:
+            context.bot.send_message(chat_id = CHAT_ID, text = "Indique las uniades por las que quiere cambiarla.")
+            return UNIT_UPDATED
+
+    # Callback that corraborate the update of the units
+    def unit_updated_callback(update:Update, context:CallbackContext):
+        global product
+        product['unit'] = int(update.message.text)
+        print("Esta en update_date")
+        connection.update_product(CHAT_ID,product)
+        update.message.reply_text("Sus unidades han sido actualizada.")
+        end2(context)
+        return ConversationHandler.END
+
+    # Callback that corraborate the update of the date
+    def date_updated_callback(update:Update, context:CallbackContext):
+        print("Esta en update_date")
+        global product
+        try:
+            product['dued_at'] = datetime.datetime.strptime(update.message.text, '%d-%m-%Y').date()
+            update.message.reply_text("Su fecha a sido guardada.")
+            connection.update_product(CHAT_ID, product)
+            end2(context)
+            return ConversationHandler.END
+        except Exception as e:
+            print(e)
+            return ConversationHandler.continue_conversation(update, context, error_product_callback)        
+
+    update_entry_points = {
+        CommandHandler(command = ['actualizar','actualiza','actualizo'], callback = start_update_callback)
+    }
+    update_states = {
+        GETTING_PRODUCT:{
+            MessageHandler(filters = Filters.regex('[a-zA-Z0-9]{2,30}'), callback = getting_product_callback)
+        },
+        UPDATE_CHOOSE:{
+           CallbackQueryHandler(callback = update_choose_callback)
+        },
+        UPDATE_SELECTION:{
+            CallbackQueryHandler(callback = update_selection_callback)
+        },
+        UNIT_UPDATED:{
+            MessageHandler(filters = Filters.regex('^[0-9]{1,3}$'), callback = unit_updated_callback)
+        },
+        DATE_UPDATED:{
+            MessageHandler(filters = Filters.regex('^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[012])-(19|20)\d\d$'), callback = date_updated_callback)
+
+        },
+    }
+    update_fallbacks = {
+            CommandHandler(command = ['cancelar', 'cancel', 'cancela'], callback = cancel_callback),
+            MessageHandler(filters = Filters.text & ~Filters.command, callback = error_delete_product_callback),
+    }
+    dispatcher.add_handler(ConversationHandler(entry_points = update_entry_points, states = update_states,  fallbacks = update_fallbacks))
+
+
+

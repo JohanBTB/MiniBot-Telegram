@@ -136,6 +136,14 @@ def get_user_info(CHAT_ID, column, conn = None):
     
     return usuario[0]
 @error1 (errorMessage="C.4.1 Fallo al conseguir informacion de la tabla productos")
+def get_product(CHAT_ID, id_product, conn = None):
+    cursor = conn.cursor()
+    cursor.execute("SELECT id,name, unit, dued_at FROM products where chat_id = %s and id = %s", (CHAT_ID, id_product))
+    producto = cursor.fetchone()
+    producto = {'id':producto[0],'name':producto[1],'unit':producto[2],'dued_at':producto[3]}
+    return producto
+
+@error1 (errorMessage="C.4.1 Fallo al conseguir el informacion de la tabla productos.")
 def get_products(CHAT_ID, value, conn = None):
     cursor = conn.cursor()
     cursor.execute("SELECT id,name FROM products where name like '%{}%'".format(value))
