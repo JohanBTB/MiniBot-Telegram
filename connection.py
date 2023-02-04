@@ -146,7 +146,7 @@ def get_product(CHAT_ID, id_product, conn = None):
 @error1 (errorMessage="C.4.1 Fallo al conseguir el informacion de la tabla productos.")
 def get_products(CHAT_ID, value, conn = None):
     cursor = conn.cursor()
-    cursor.execute("SELECT id,name FROM products where name like '%{}%'".format(value))
+    cursor.execute("SELECT id,name FROM products where name like '%{}%' ORDER BY id".format(value))
     rows = cursor.fetchmany()
     result = []
     while rows:

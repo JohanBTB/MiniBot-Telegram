@@ -168,9 +168,11 @@ def welcome_conversation(updater,dispatcher):
 
 # FIN Start Conversation --------------------------------------------------------------------------------------------------------------------------------------
 
+REPORT_CHOSE, REPORT_DATE, REPORT_DATE2, REPORT_NAME, REPORT_UNIT, REPORT_UNIT2, REPORT_DONE= range(7)
 UPDATE_GETTING_PRODUCT, UPDATE_CHOOSE, UPDATE_SELECTION, UNIT_UPDATED, DATE_UPDATED = range(5)
 UPDATE_UNIT, NEW_PRODUCT, DATE,KC_DATE, UPDATE_DATE, VERIFY_PRODUCT, UPDATE_CONTINUE= range(7)
 GUESSING, NO_PRODUCT, NO_PRODUCT2, DELETE_PRODUCT= range(4)
+
 def productos(updater,dispatcher):
 
     global product
@@ -542,5 +544,128 @@ def productos(updater,dispatcher):
     }
     dispatcher.add_handler(ConversationHandler(entry_points = update_entry_points, states = update_states,  fallbacks = update_fallbacks))
 
+    global rangos
+    global full_search
+    def end3(context:CallbackContext):
+        global rangos
+        rangos = []
+        context.bot.send_message(chat_id = CHAT_ID, text = 'Hasta la proxima.')
+        context.bot.send_animation(chat_id = CHAT_ID, animation = open(HOME_PATH + r"\recursos\hasta_la_proxima.gif", "rb"))
 
+    # Callback that manage the start of the command report
+    def start_report_callback(update:Update, context:CallbackContext):
+        global rangos
+        global full_search
+        rangos = []
+        full_search = False
+        if(start_handler != ''):
+            updater.dispatcher.remove_handler(start_handler) 
+        mensaje = f"Hola { connection.get_user_info(CHAT_ID, 'nickname') }, ¿Sobre que datos quieres tener el reporte?"
+        buttons = [[
+                InlineKeyboardButton(f'Fecha', callback_data = 'date')],[
+                InlineKeyboardButton(f'Unidades', callback_data = 'unit')],[
+                InlineKeyboardButton(f'Nombre', callback_data = 'name')],[
+                InlineKeyboardButton(f'Todas', callback_data = 'all')],
+            ]
+        keyboardMarkup = InlineKeyboardMarkup(buttons)
+        update.message.reply_text(mensaje, reply_markup = keyboardMarkup)
+        return REPORT_CHOSE
+    
+    # Cllback that check what was chose
+    def report_chose_callback(update: Update, context:CallbackContext):
+        global full_search
+        data = update.callback_query.data
+        if(data == 'date'):
+            context.bot.send_message(chat_id = CHAT_ID ,text = "Ingrese el primer rango de la fecha")
+            return REPORT_DATE
+        elif(data == 'unit'):
+            context.bot.send_message(chat_id = CHAT_ID ,text = "Ingrese el primer rango de la cantidad de unidades")
+            return REPORT_UNIT
+        elif(data == 'name'):
+            context.bot.send_message(chat_id = CHAT_ID ,text = "Ingrese el nombre del producto")
+            return REPORT_NAME
+        else:
+            full_search = True
+            context.bot.send_message(chat_id = CHAT_ID ,text = "Bueno, comencemos por la fecha.\nIngrese el primer rango de fecha")
+            return REPORT_DATE
+    # Callback that receives a date and ask you for the second one
+    def report_date_callback(update: Update, context:CallbackContext):
+        global rangos
+        rangos.append(update.message.text)
+        update.message.reply_text("Ahora ingrese el segundo rango de fecha")
+        return REPORT_DATE2
 
+    # Callback that that asks you for the name or just finish the conversation    
+    def report_date2_callback(update: Update, context:CallbackContext):
+        global rangos
+        rangos.append(update.message.text)
+        if full_search:
+            update.message.reply_text("Continuemos con el nombre, por favor ingrese el nombre del producto.")
+            return REPORT_NAME
+        else:
+            update.message.reply_text("Aqui esta el reporte generado:")
+            end3(context)
+            return ConversationHandler.END
+    
+    def report_name_callback(update: Update, context:CallbackContext):
+        global rangos
+        rangos.append(update.message.text)
+        if full_search:
+            update.message.reply_text("Ahora terminemos con las unidades, ingresa el primer rango de la unidades.")
+            return REPORT_UNIT
+        else:
+            update.message.reply_text("Aqui esta el reporte generado:")
+            end3(context)
+            return ConversationHandler.END
+    
+    def report_unit_callback(update: Update, context:CallbackContext):
+        global rangos
+        rangos.append(update.message.text)
+        update.message.reply_text("Ingrese el segundo rango de unidades")
+        return REPORT_UNIT2
+    
+    def report_unit2_callback(update: Update, context:CallbackContext):
+        global rangos
+        update.message.reply_text("Aqui esta el reporte generado")
+        end3(context)
+        return ConversationHandler.END
+    
+    report_entry_points = {
+        CommandHandler(command = ['reporte','reporta','reportar'], callback = start_report_callback)
+    }
+
+    def report_done_callback(update:Update, context:CallbackContext):
+        update.message.reply_Text("Aqui esta el reporte")
+        end3(context)
+        return ConversationHandler.END
+        
+    report_states = {
+        REPORT_CHOSE:{
+            CallbackQueryHandler(callback = report_chose_callback)
+        },
+        REPORT_DATE:{
+            MessageHandler(filters = Filters.regex('^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[012])-(19|20)\d\d$'), callback = report_date_callback)
+        },
+        REPORT_DATE2:{
+            MessageHandler(filters = Filters.regex('^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[012])-(19|20)\d\d$'), callback = report_date2_callback)
+        },
+        REPORT_NAME:{
+            MessageHandler(filters = Filters.regex('[a-zA-Z0-9]{2,30}'), callback = report_name_callback)
+        },
+        REPORT_UNIT:{
+            MessageHandler(filters = Filters.regex('^[0-9]{1,3}$'), callback = report_unit_callback)
+        },
+        REPORT_UNIT2:{
+            MessageHandler(filters = Filters.regex('^[0-9]{1,3}$'), callback = report_unit2_callback)
+        },
+        REPORT_DONE:{
+            MessageHandler(filters = Filters.text & ~Filters.command, callback = report_done_callback)
+        }
+    }
+    report_fallbacks = {
+            CommandHandler(command = ['cancelar', 'cancel', 'cancela'], callback = cancel_callback),
+            MessageHandler(filters = Filters.text & ~Filters.command, callback = error_delete_product_callback),
+    }
+    dispatcher.add_handler(ConversationHandler(entry_points = report_entry_points, states = report_states,  fallbacks = report_fallbacks))
+
+    
