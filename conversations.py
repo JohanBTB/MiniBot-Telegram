@@ -5,6 +5,7 @@ from telegram.ext import Updater, MessageHandler, Filters, CallbackContext, Comm
                         CallbackQueryHandler, InlineQueryHandler
 from telegram.ext.dispatcher import run_async
 
+import openpyxl
 import connection
 import time, datetime
 import asyncio
@@ -235,7 +236,7 @@ def productos(updater,dispatcher):
         global product
         print("Esta en new_product")
         product['unit'] = int(update.message.text)
-        update.message.reply_text('¿Cuál es la fecha de vencimiento?\n Un ejemplo de fecha que debe ingresar es: 12-10-2021')
+        update.message.reply_text('¿Cuál es la fecha de vencimiento?\n Un ejemplo de fecha que debe ingresar es: 15-10-2021')
         return DATE
 
     # It updates the units and asks if you wanna change the due date
@@ -546,9 +547,23 @@ def productos(updater,dispatcher):
 
     global rangos
     global full_search
-    def end3(context:CallbackContext):
+    def end3(context:CallbackContext, rows):
         global rangos
         rangos = []
+        # Creating an excel report
+        wb = openpyxl.Workbook()
+        sheet = wb.active
+        columnas = ['A','B','C','D','E','F','G']
+        sheet['A1'] = 'Id';sheet['B1'] = 'Chat Id';sheet['C1'] = 'Name';sheet['D1'] = 'Unit';sheet['E1'] = 'Dued at';sheet['F1'] = 'Created at';sheet['G1'] = 'Updated at'
+        for i in range(len(rows)):
+            row = rows[i]
+            for j in range(len(row)):
+                sheet[columnas[j] + str(i+2)] = row[j]
+        today = datetime.date.today()
+        today = today.strftime("%d%m%y")
+        ruta = str(today) + ".xlsx"
+        wb.save(ruta)
+        context.bot.send_document(chat_id=CHAT_ID, document=open(ruta, 'rb'))
         context.bot.send_message(chat_id = CHAT_ID, text = 'Hasta la proxima.')
         context.bot.send_animation(chat_id = CHAT_ID, animation = open(HOME_PATH + r"\recursos\hasta_la_proxima.gif", "rb"))
 
@@ -604,7 +619,11 @@ def productos(updater,dispatcher):
             return REPORT_NAME
         else:
             update.message.reply_text("Aqui esta el reporte generado:")
-            end3(context)
+            if(rangos[0]>rangos[1]):
+                rangos[0],rangos[1] = rangos[1], rangos[0]
+
+            resultado = connection.simple_report_product(CHAT_ID, rangos, 'dued_at')
+            end3(context, resultado)
             return ConversationHandler.END
     
     def report_name_callback(update: Update, context:CallbackContext):
@@ -615,29 +634,42 @@ def productos(updater,dispatcher):
             return REPORT_UNIT
         else:
             update.message.reply_text("Aqui esta el reporte generado:")
-            end3(context)
+            resultado = connection.simple_report_product(CHAT_ID, rangos, 'name')
+            end3(context, resultado)
             return ConversationHandler.END
     
     def report_unit_callback(update: Update, context:CallbackContext):
         global rangos
-        rangos.append(update.message.text)
+        rangos.append(int(update.message.text))
         update.message.reply_text("Ingrese el segundo rango de unidades")
         return REPORT_UNIT2
     
     def report_unit2_callback(update: Update, context:CallbackContext):
         global rangos
+        rangos.append(int(update.message.text))
         update.message.reply_text("Aqui esta el reporte generado")
-        end3(context)
+        resultado = ""
+        if(full_search):
+            if(rangos[3]>rangos[4]):
+                rangos[3],rangos[4] = rangos[4], rangos[3]
+            resultado = connection.advance_report_product(CHAT_ID, rangos)
+            
+        else:
+            if(rangos[0]>rangos[1]):
+                rangos[0],rangos[1] = rangos[1], rangos[0]
+            resultado = connection.simple_report_product(CHAT_ID, rangos, 'unit')
+        end3(context, resultado)
         return ConversationHandler.END
     
-    report_entry_points = {
-        CommandHandler(command = ['reporte','reporta','reportar'], callback = start_report_callback)
-    }
-
     def report_done_callback(update:Update, context:CallbackContext):
         update.message.reply_Text("Aqui esta el reporte")
-        end3(context)
+        resultado = connection.simple_report_product(CHAT_ID, rangos, 'dued_at')
+        end3(context, resultado)
         return ConversationHandler.END
+
+    report_entry_points = {
+        CommandHandler(command = ['reporte','reporta','reportar','report'], callback = start_report_callback)
+    }
         
     report_states = {
         REPORT_CHOSE:{

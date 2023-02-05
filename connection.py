@@ -133,8 +133,8 @@ def get_user_info(CHAT_ID, column, conn = None):
     cursor = conn.cursor()
     cursor.execute("SELECT {} FROM users where chat_id = %s".format(column), (CHAT_ID,))
     usuario = cursor.fetchone()
-    
     return usuario[0]
+
 @error1 (errorMessage="C.4.1 Fallo al conseguir informacion de la tabla productos")
 def get_product(CHAT_ID, id_product, conn = None):
     cursor = conn.cursor()
@@ -148,11 +148,11 @@ def get_products(CHAT_ID, value, conn = None):
     cursor = conn.cursor()
     cursor.execute("SELECT id,name FROM products where name like '%{}%' ORDER BY id".format(value))
     rows = cursor.fetchmany()
-    result = []
+    resultado = []
     while rows:
-        result.extend(rows)
+        resultado.extend(rows)
         rows = cursor.fetchmany()
-    return result
+    return resultado
 # ---------------------------------------------------------------------------------------------------
 # UPDATING
 @error2 (errorMessage="C.5 Fallo al actualizar o guardar informacion.")
@@ -185,10 +185,39 @@ def update_product(CHAT_ID,product, cerrar=True ):
         close_connection(conn)
 # ---------------------------------------------------------------------------------------------------
 # DELETING
-@error1 (errorMessage = "C.2.1 Fallo la la eliminacion de un producto.")
+@error1 (errorMessage = "C.6.1 Fallo la la eliminacion de un producto.")
 def delete_product(CHAT_ID,id_product, conn = None):
     cursor = conn.cursor()
     cursor.execute("DELETE FROM products where chat_id = %s and id = %s", (CHAT_ID, int(id_product)))
     conn.commit()
     return True
+
+# ---------------------------------------------------------------------------------------------------
+# REPORTING
+@error1 (errorMessage="C.7.1 Fallo al generar el reporte.")
+def simple_report_product(CHAT_ID, ranges, column, conn = None):
+    cursor = conn.cursor()
+    if column == "name":
+        cursor.execute("SELECT * FROM products where chat_id = %s AND name like '%%%s%%' order by id" % (CHAT_ID, ranges[0]))
     
+    else:    
+        cursor.execute("SELECT * FROM products where chat_id = %s AND {} BETWEEN %s AND %s order by id ".format(column), (CHAT_ID, ranges[0], ranges[1]))
+    rows = cursor.fetchmany()
+    resultado = []
+    while rows:
+        resultado.extend(rows)
+        rows = cursor.fetchmany()
+    return resultado
+
+@error1 (errorMessage="C.7.2 Fallo al generar el reporte.")
+def advance_report_product(CHAT_ID, ranges, conn = None):
+    cursor = conn.cursor()
+    print(ranges)    
+    cursor.execute("""SELECT * FROM products where chat_id = %s AND (dued_at BETWEEN %s AND %s)
+                      AND (name like %s) AND (unit BETWEEN %s AND %s) order by id """.format(ranges[2]), (CHAT_ID, ranges[0], ranges[1], '%' + ranges[2] + '%',ranges[3], ranges[4]))
+    rows = cursor.fetchmany()
+    resultado = []
+    while rows:
+        resultado.extend(rows)
+        rows = cursor.fetchmany()
+    return resultado
