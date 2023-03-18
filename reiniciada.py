@@ -5,7 +5,7 @@ try:
         host="localhost",
         database="MyBot",
         user="postgres",
-        password="johan12.com"
+        password=""
     )
     print("a")
     cursor = conn.cursor()

@@ -30,7 +30,7 @@ def start(dispatcher):
 
 def sendMessage():
     sender_email = connection.get_user_info(CHAT_ID, 'email')
-    receiver = "jonny.tu.pai.69@gmail.com"
+    receiver = ""
 
 def cancel_callback(update:Update, context:CallbackContext):
     global start_handler

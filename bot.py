@@ -41,38 +41,6 @@ def echo(update: Update, context:CallbackContext):
     if inicio.lower()=='hablame':
         # Mandamos texto como respuesta, puede ser HTML
         update.message.reply_text(f"<strike>La respuesta es </strike><b><i>{res}.</i></b>Visitame en <a target='_blank'>www.google.com.pe</a>", parse_mode = ParseMode.HTML ,reply_to_message_id = update.message.message_id)
-        
-        # Mandamos imagenes como respuesta
-        #update.message.reply_photo(open(imagen_path, "rb"),reply_to_message_id = update.message.message_id)
-        
-        # Mandamos audio como respuesta
-        #update.message.reply_audio(audio, title="Oh me vengo", caption="Audio de prueba", thumb = open(thumb_path, "rb") )
-        
-        # Mandamos video como respuesta
-        #update.message.reply_video(open(video_path, "rb"), caption="Oh me vengo", reply_to_message_id = update.message.message_id) 
-
-        # Mandamos un archivo como respuesta
-        #update.message.reply_document(open(pdf_path, "rb"), reply_to_message_id = update.message.message_id, thumb = open(thumb_path, "rb"))
-        
-        # Mandamos un GIF como respuesta
-        #update.message.reply_animation(open(gif_path, "rb"), reply_to_message_id =update.message.message_id)
-
-        # Mandamos localizacion como respuesta
-        # update.message.reply_text("Espera, ahora te envio un mensaje....")
-        # time.sleep(5)
-        # i = update.message.reply_text("Esta es mi ubicacion")
-        # update.message.reply_location(latitude, longitude, reply_to_message_id = update.message.message_id)
-
-        # Mandamos una encuesta como respuesta
-        # update.message.reply_poll('Te gusta mi pito?', ['Si', 'No', 'Me muero de ganas de morderlo'])
-        # update.message.reply_poll('Te gusta que te la metan?', ['Ansio ganas', 'Aun no me la han puesto', 'Depende, ¿dónde?'], is_anonymous = False, \
-        #                             allows_multiple_answers = True, type = Poll.QUIZ,correct_option_id = 1, close_date=5, quote = True)
-
-        # Mandar varios multimedia
-        # inputPhoto = InputMediaPhoto(open('D:\\IMGSRAND\\bocchi3.jpg', 'rb'))
-        # inputVideo = InputMediaVideo(open(PATH+'videos\\faraon.mp4', 'rb'))
-        # update.message.reply_media_group([inputPhoto, inputVideo])
-
 # Notificaciones
 def notificaciones(update: Update, context:CallbackContext):
     if update.message == None:

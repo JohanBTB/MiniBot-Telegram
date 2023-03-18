@@ -6,7 +6,7 @@ def connection():
             host="localhost",
             database="MyBot",
             user="postgres",
-            password="johan12.com"
+            password=""
         )
         return conn
         print("Se inicio la coneccion PostgreSQL")

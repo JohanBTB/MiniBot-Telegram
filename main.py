@@ -10,7 +10,7 @@ from telegram.ext import Updater # Importacion del Updater de telegram
 import tracemalloc
 
 
-TOKEN = "5798240265:AAGdgZ4EwjoDAZL2JmCkreoBgwtIbLhRO-0"
+TOKEN = ""
 CHAT_ID = ""
 
 def main():
